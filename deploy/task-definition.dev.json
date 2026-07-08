@@ -1,0 +1,94 @@
+{
+  "_comment": "agenteia-backend-dev — dev environment. Runs in a private subnet with no internet egress — all AWS service access goes through VPC endpoints, and config/secrets come from SSM Parameter Store.",
+  "family": "agenteia-backend-dev",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "_comment_arch": "X86_64 en dev. Cambiar a ARM64 (Graviton) en prod.",
+    "operatingSystemFamily": "LINUX"
+  },
+  "executionRoleArn": "arn:aws:iam::218238637006:role/AgenteIA-ECS-TaskExecution-Role",
+  "taskRoleArn": "arn:aws:iam::218238637006:role/AgenteIA-Backend-Role",
+  "stopTimeout": 120,
+  "_comment_stop_timeout": "Ventana de drenaje generosa para respuestas SSE de chat largas, por debajo del timeout idle del ALB (~150s).",
+  "containerDefinitions": [
+    {
+      "name": "agenteia-backend",
+      "image": "218238637006.dkr.ecr.us-east-1.amazonaws.com/agenteia-backend-dev-repository:latest",
+      "_comment_image_tag": "Tu deploy.yml actual NO registra una nueva revisión de task definition por deploy — solo hace force-new-deployment sobre el servicio existente. Por eso el tag debe ser 'latest' (mutable), no un SHA fijo, o el force-deployment seguirá jalando la imagen vieja.",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health/check || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
+      "_comment_health_check": "La regla del listener del ALB que evita auth de Cognito (pass-through) y el health check del target group deben apuntar ambos a esta misma ruta: /api/v1/health/check",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/agenteia-backend-dev",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "agenteia-backend",
+          "awslogs-create-group": "true"
+        }
+      },
+      "environment": [
+        { "name": "ENVIRONMENT", "value": "development" },
+        { "name": "AWS_REGION", "value": "us-east-1" },
+        { "name": "LOG_LEVEL", "value": "INFO" },
+        { "name": "API_HOST", "value": "0.0.0.0" },
+        { "name": "API_PORT", "value": "8000" },
+        { "name": "EMBEDDINGS_PROVIDER", "value": "aws" },
+        { "name": "EMBEDDINGS_MODEL_ID", "value": "cohere.embed-multilingual-v3" },
+        { "name": "EMBEDDINGS_REGION", "value": "us-east-1" },
+        { "name": "EMBEDDINGS_DIMENSIONS", "value": "1024" },
+        { "name": "LLM_PROVIDER", "value": "aws" },
+        { "name": "LLM_REGION", "value": "us-east-1" },
+        { "name": "ORCHESTRATOR_MODEL_ID", "value": "qwen.qwen3-32b-v1:0" },
+        { "name": "ORCHESTRATOR_MAX_TOKENS", "value": "2048" },
+        { "name": "ORCHESTRATOR_TEMPERATURE", "value": "0.0" },
+        { "name": "ORCHESTRATOR_TOP_P", "value": "0.9" },
+        { "name": "RECONTEXTUALIZER_MODEL_ID", "value": "qwen.qwen3-32b-v1:0" },
+        { "name": "CONTEXT_GATEKEEPER_MODEL_ID", "value": "amazon.nova-micro-v1:0" },
+        { "name": "VLM_MODEL_ID", "value": "qwen.qwen3-vl-235b-a22b" },
+        { "name": "_comment_vlm", "value": "PENDIENTE DE CONFIRMAR: este modelo aparece en tus docs solo como el OCR de ingesta (Lambda 2), no como parte del flujo de chat del backend. Verifica si el backend realmente invoca un VLM (ej. adjuntos de imagen en el chat) o si esta variable no se usa." },
+        { "name": "CORS_ORIGINS", "value": "<PENDIENTE: dominio del portal/frontend, ej. https://rag.tuempresa.com>" },
+        { "name": "DYNAMODB_TABLE_MESSAGES", "value": "agenteia-tabla-mensajes-dev" },
+        { "name": "S3_PDFS_BUCKET", "value": "agenteia-bucket-principal-dev" },
+        { "name": "S3_INGEST_RESULTS_BUCKET", "value": "agenteia-bucket-principal-dev" },
+        { "name": "S3_CHAT_FILES", "value": "agenteia-bucket-principal-dev" },
+        { "name": "S3_LOGOS_BUCKET", "value": "agenteia-bucket-principal-dev" },
+        { "name": "_comment_buckets", "value": "Los 4 apuntan al mismo bucket por decision del equipo. La app debe manejar la separacion via prefijos internos (ej. ChatFiles/, Logos/) — confirmar que esos prefijos no choquen con los que ya usa el pipeline de ingesta (documents/, pages/, markdown/, assembled/, chunks/) ni con el prefijo Archivos/ que usan los roles IAM actuales. Hay dos convenciones de nombres de prefijo distintas en los documentos del proyecto (Archivos/ vs documents+pages+markdown+assembled+chunks) — resolver cual es la vigente antes de escribir datos reales." },
+        { "name": "WEAVIATE_URL", "value": "<PENDIENTE: IP privada o DNS interno del EC2 Weaviate, ej. http://10.0.x.x:8080>" },
+        { "name": "WEAVIATE_CLASS_NAME", "value": "<PENDIENTE: nombre de la clase/colección en Weaviate>" },
+        { "name": "WEAVIATE_GRPC", "value": "<PENDIENTE: misma IP/DNS que WEAVIATE_URL, puerto 50051>" },
+        { "name": "DB_HOST", "value": "agenteia-rds-dev.ceutpykflywi.us-east-1.rds.amazonaws.com" },
+        { "name": "DB_NAME", "value": "rag_db" },
+        { "name": "DB_USER", "value": "admin" },
+        { "name": "DB_PORT", "value": "3306" },
+        { "name": "_comment_db_engine", "value": "Confirmado como MySQL por el equipo. arquitectura-rag-multitenant.md dice PostgreSQL en varios lugares — actualizar ese documento para evitar confusion futura." },
+        { "name": "DB_SSL_DISABLED", "value": "False" },
+        { "name": "JWT_EXPIRATION_MINUTES", "value": "2880" }
+      ],
+      "secrets": [
+        { "name": "DB_PASSWORD", "valueFrom": "arn:aws:ssm:us-east-1:218238637006:parameter/rag-fastapi/db_password" },
+        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:ssm:us-east-1:218238637006:parameter/rag-fastapi/jwt_secret_key" }
+      ],
+      "_comment_ssm_namespace": "Nota: estos secrets usan el namespace /rag-fastapi/* mientras que los Lambdas de ingesta usan /agenteia/dev/*. Son namespaces distintos en el mismo proyecto — confirma si es intencional (app distinta) o si conviene unificar.",
+      "_comment_no_aws_keys": "No configures AWS_PROFILE/AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY aquí. Omitirlos deja que la app use las credenciales del task role (AgenteIA-Backend-Role) automáticamente.",
+      "_comment_weaviate": "Weaviate corre self-hosted dentro de la VPC (subnet privada de datos) y se alcanza por IP privada/DNS interno, no un endpoint SaaS público.",
+      "_comment_no_nat": "Esta tarea no tiene salida a internet (sin NAT gateway). OPENAI_BASE_URL apunta a un endpoint público — verifica cómo resuelve esto sin NAT (¿VPC endpoint de terceros? ¿proxy? Esto no está resuelto en ningún ADR que tengo)."
+    }
+  ]
+}

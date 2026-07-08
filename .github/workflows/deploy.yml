@@ -1,17 +1,11 @@
-# Reference / sample workflow — NOT wired to a real AWS account yet.
-# Fill in the env values below (cluster, service, ECR repo, IAM role ARN)
-# before enabling. Gated behind workflow_dispatch so it never fires on a
-# plain push against infrastructure that doesn't exist yet.
-name: Build and Deploy (sample)
+name: Build and Deploy
 
 on:
   workflow_dispatch: {}
-
-env:
-  AWS_REGION: <region>
-  ECR_REPOSITORY: rag-fastapi-piloto-ia
-  ECS_CLUSTER: <ecs-cluster-name>
-  ECS_SERVICE: <ecs-service-name>
+  # Una vez exista la infraestructura (paso 4-6 de la guía), descomenta esto
+  # para que despliegue automáticamente en cada push a staging:
+  # push:
+  #   branches: [staging]
 
 permissions:
   id-token: write
@@ -20,6 +14,11 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +26,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::<account_id>:role/github-actions-fargate-deploy
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
