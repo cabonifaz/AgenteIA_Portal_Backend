@@ -29,8 +29,8 @@ typing-extensions>=4.12.2
 # Database ORM
 sqlalchemy==2.0.23
 
-# Database Driver - SQL Server
-pyodbc==5.0.1
+# Database Driver - MySQL
+PyMySQL==1.1.1
 
 # Security and Auth
 python-multipart==0.0.6
@@ -41,12 +41,3 @@ langgraph==1.0.5
 
 # Openai
 openai==2.15.0
-
-# Development tools (optional)
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-mock==3.12.0
-black==23.11.0
-isort==5.12.0
-flake8==6.1.0
-mypy==1.7.1

@@ -21,8 +21,7 @@ engine = create_engine(
     pool_recycle=1800,   # ✅ Recycle connections every 30 minutes (shorter interval)
     pool_reset_on_return='rollback',  # ✅ Rollback on every return for clean state
     connect_args={
-        "timeout": 30,        # 30 second connection timeout
-        "login_timeout": 30   # 30 second SQL Server login timeout
+        "connect_timeout": 30  # 30 second connection timeout
     }
 )
 
@@ -78,7 +77,7 @@ def retry_on_db_error(max_retries=3, delay=1):
                     last_error = e
                     error_code = str(e)
                     # Check if it's a communication/connection error
-                    if any(code in error_code for code in ['08S01', '0x274C', 'Communication link failure', 'connection']):
+                    if any(code in error_code for code in ['2003', '2006', '2013', 'MySQL server has gone away', 'Lost connection', 'connection']):
                         logger.warning(f"Database connection error (attempt {attempt + 1}/{max_retries}): {e}")
                         if attempt < max_retries - 1:
                             await asyncio.sleep(delay * (2 ** attempt))  # Exponential backoff
@@ -97,7 +96,7 @@ def retry_on_db_error(max_retries=3, delay=1):
                     last_error = e
                     error_code = str(e)
                     # Check if it's a communication/connection error
-                    if any(code in error_code for code in ['08S01', '0x274C', 'Communication link failure', 'connection']):
+                    if any(code in error_code for code in ['2003', '2006', '2013', 'MySQL server has gone away', 'Lost connection', 'connection']):
                         logger.warning(f"Database connection error (attempt {attempt + 1}/{max_retries}): {e}")
                         if attempt < max_retries - 1:
                             time.sleep(delay * (2 ** attempt))  # Exponential backoff
@@ -133,7 +132,7 @@ def get_db() -> Session:
         except Exception as close_error:
             # If it's a connection error, dispose of the connection to prevent reuse
             error_code = str(close_error)
-            if any(code in error_code for code in ['08S01', '0x274C', 'Communication link failure', 'connection']):
+            if any(code in error_code for code in ['2003', '2006', '2013', 'MySQL server has gone away', 'Lost connection', 'connection']):
                 logger.warning(f"Connection error while closing session, disposing pool: {close_error}")
                 engine.dispose()
             else:

@@ -13,34 +13,33 @@ class DatabaseConfig(BaseSettings):
         extra="ignore"
     )
 
-    # SQL Server Database Configuration
-    db_server: str
-    db_database: str
-    db_username: str
+    # MySQL Database Configuration
+    db_host: str
+    db_name: str
+    db_user: str
     db_password: str
-    db_driver: str = "ODBC Driver 17 for SQL Server"
-    db_port: int = 1433
-    db_trusted_connection: bool = False
-    
-    @field_validator('db_server')
+    db_port: int = 3306
+    db_ssl_disabled: bool = False
+
+    @field_validator('db_host')
     @classmethod
-    def validate_db_server(cls, v):
+    def validate_db_host(cls, v):
         if not v:
-            raise ValueError("Database server is required")
+            raise ValueError("Database host is required")
         return v
 
-    @field_validator('db_database')
+    @field_validator('db_name')
     @classmethod
-    def validate_db_database(cls, v):
+    def validate_db_name(cls, v):
         if not v:
             raise ValueError("Database name is required")
         return v
 
-    @field_validator('db_username')
+    @field_validator('db_user')
     @classmethod
-    def validate_db_username(cls, v):
+    def validate_db_user(cls, v):
         if not v:
-            raise ValueError("Database username is required")
+            raise ValueError("Database user is required")
         return v
 
     @field_validator('db_password')
@@ -49,14 +48,12 @@ class DatabaseConfig(BaseSettings):
         if not v:
             raise ValueError("Database password is required")
         return v
-    
+
     @property
     def database_url(self) -> str:
-        """Generate SQL Server connection string"""
-        if self.db_trusted_connection:
-            return f"mssql+pyodbc://@{self.db_server}:{self.db_port}/{self.db_database}?driver={self.db_driver.replace(' ', '+')}&trusted_connection=yes"
-        else:
-            return f"mssql+pyodbc://{self.db_username}:{self.db_password}@{self.db_server}:{self.db_port}/{self.db_database}?driver={self.db_driver.replace(' ', '+')}"
+        """Generate MySQL connection string"""
+        ssl_param = "&ssl_disabled=true" if self.db_ssl_disabled else ""
+        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}?charset=utf8mb4{ssl_param}"
 
 # Create database configuration instance
 try:
