@@ -82,8 +82,7 @@
         { "name": "JWT_EXPIRATION_MINUTES", "value": "2880" }
       ],
       "secrets": [
-        { "name": "DB_PASSWORD", "valueFrom": "arn:aws:ssm:us-east-1:218238637006:parameter/rag-fastapi/db_password" },
-        { "name": "JWT_SECRET_KEY", "valueFrom": "arn:aws:ssm:us-east-1:218238637006:parameter/rag-fastapi/jwt_secret_key" }
+        { "name": "DB_PASSWORD", "valueFrom": "arn:aws:ssm:us-east-1:218238637006:parameter/agenteia/dev/rds/master-password" }
       ],
       "_comment_ssm_namespace": "Nota: estos secrets usan el namespace /rag-fastapi/* mientras que los Lambdas de ingesta usan /agenteia/dev/*. Son namespaces distintos en el mismo proyecto — confirma si es intencional (app distinta) o si conviene unificar.",
       "_comment_no_aws_keys": "No configures AWS_PROFILE/AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY aquí. Omitirlos deja que la app use las credenciales del task role (AgenteIA-Backend-Role) automáticamente.",
